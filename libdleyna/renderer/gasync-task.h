@@ -36,7 +36,6 @@ const char *dleyna_gasync_task_create_source(void);
 void dleyna_gasync_task_add(const dleyna_task_queue_key_t *queue_id,
 		dleyna_gasync_task_action action,
 		GObject *target,
-		GAsyncReadyCallback callback,
 		GCancellable *cancellable,
 		GDestroyNotify free_func,
 		gpointer cb_user_data);

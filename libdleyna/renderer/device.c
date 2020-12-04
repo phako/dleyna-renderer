@@ -683,14 +683,22 @@ static void prv_get_protocol_info_cb(GObject *target,
 	gchar *result = NULL;
 	gboolean end;
 	GError *error = NULL;
-	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
+	dleyna_gasync_task_t *task = NULL;
+	prv_new_device_ct_t *priv_t = NULL;
 	GUPnPServiceProxyAction *action;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	priv_t->dev->construct_step++;
-
 	action = gupnp_service_proxy_call_action_finish(GUPNP_SERVICE_PROXY(target), res, &error);
+
+	if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+		DLEYNA_LOG_WARNING("GetProtocolInfo operation cancelled");
+		goto on_error;
+	}
+
+	task = (dleyna_gasync_task_t *) user_data;
+	priv_t = (prv_new_device_ct_t *) dleyna_gasync_task_get_user_data (task);
+	priv_t->dev->construct_step++;
 
 	if (action == NULL || (error != NULL)) {
 		DLEYNA_LOG_WARNING("GetProtocolInfo operation failed: %s",
@@ -710,6 +718,9 @@ static void prv_get_protocol_info_cb(GObject *target,
 	prv_process_protocol_info(priv_t->dev, result);
 
 on_error:
+
+	if (task)
+		dleyna_task_queue_task_completed (((dleyna_task_atom_t *) task)->queue_id);
 
 	if (action) {
 		gupnp_service_proxy_action_unref(action);
@@ -769,7 +780,8 @@ static void prv_introspect_av_cb (GObject *target,
 				  GAsyncResult *res,
 				  gpointer user_data)
 {
-	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
+	dleyna_gasync_task_t *task = NULL;
+	prv_new_device_ct_t *priv_t = NULL;
 	GError *error = NULL;
 	GUPnPServiceIntrospection *introspection;
 	const GUPnPServiceStateVariableInfo *svi;
@@ -779,9 +791,16 @@ static void prv_introspect_av_cb (GObject *target,
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	priv_t->dev->construct_step++;
-
 	introspection = prv_introspect_finish (GUPNP_SERVICE_INFO (target), res, &error);
+
+	if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+		DLEYNA_LOG_WARNING("GetProtocolInfo operation cancelled");
+		goto on_error;
+	}
+
+	task = (dleyna_gasync_task_t *) user_data;
+	priv_t = (prv_new_device_ct_t *) dleyna_gasync_task_get_user_data (task);
+	priv_t->dev->construct_step++;
 
 	if (introspection == NULL || (error != NULL)) {
 		DLEYNA_LOG_WARNING("GetProtocolInfo operation failed: %s",
@@ -814,6 +833,9 @@ static void prv_introspect_av_cb (GObject *target,
 	priv_t->dev->can_get_byte_position = (sai != NULL);
 
 on_error:
+	if (task)
+		dleyna_task_queue_task_completed (((dleyna_task_atom_t *) task)->queue_id);
+
 	g_clear_object(&introspection);
 
 	g_clear_error(&error);
@@ -825,16 +847,24 @@ static void prv_introspect_rc_cb (GObject *target,
 				  GAsyncResult *res,
 				  gpointer user_data)
 {
-	prv_new_device_ct_t *priv_t = (prv_new_device_ct_t *)user_data;
+	dleyna_gasync_task_t *task = NULL;
+	prv_new_device_ct_t *priv_t = NULL;
 	GError *error = NULL;
 	GUPnPServiceIntrospection *introspection;
 	const GUPnPServiceStateVariableInfo *svi;
 
 	DLEYNA_LOG_DEBUG("Enter");
 
-	priv_t->dev->construct_step++;
-
 	introspection = prv_introspect_finish (GUPNP_SERVICE_INFO (target), res, &error);
+
+	if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+		DLEYNA_LOG_WARNING("GetProtocolInfo operation cancelled");
+		goto on_error;
+	}
+
+	task = (dleyna_gasync_task_t *) user_data;
+	priv_t = (prv_new_device_ct_t *) dleyna_gasync_task_get_user_data (task);
+	priv_t->dev->construct_step++;
 
 	if (introspection == NULL || (error != NULL)) {
 		DLEYNA_LOG_WARNING("GetProtocolInfo operation failed: %s",
@@ -849,6 +879,9 @@ static void prv_introspect_rc_cb (GObject *target,
 		priv_t->dev->max_volume = g_value_get_uint(&svi->maximum);
 
 on_error:
+	if (task)
+		dleyna_task_queue_task_completed (((dleyna_task_atom_t *) task)->queue_id);
+
 	g_clear_object(&introspection);
 
 	g_clear_error(&error);
@@ -866,17 +899,27 @@ static gboolean prv_get_protocol_info(
 
     gupnp_service_proxy_call_action_async(GUPNP_SERVICE_PROXY (target), action,
             dleyna_gasync_task_get_cancellable (task),
-            dleyna_gasync_task_ready_cb,
+            prv_get_protocol_info_cb,
             task);
 
     return FALSE;
 }
 
-static gboolean prv_introspect(dleyna_gasync_task_t *task, GObject *target)
+static gboolean prv_introspect_av(dleyna_gasync_task_t *task, GObject *target)
 {
 	prv_introspect_async (GUPNP_SERVICE_INFO (target),
 			      dleyna_gasync_task_get_cancellable (task),
-			      dleyna_gasync_task_ready_cb,
+			      prv_introspect_av_cb,
+			      task);
+
+	return FALSE;
+}
+
+static gboolean prv_introspect_rc(dleyna_gasync_task_t *task, GObject *target)
+{
+	prv_introspect_async (GUPNP_SERVICE_INFO (target),
+			      dleyna_gasync_task_get_cancellable (task),
+			      prv_introspect_rc_cb,
 			      task);
 
 	return FALSE;
@@ -892,6 +935,8 @@ static gboolean prv_subscribe(dleyna_gasync_task_t *task, GObject *target)
 
 	device->construct_step++;
 	prv_device_subscribe_context(device);
+
+	dleyna_task_queue_task_completed (((dleyna_task_atom_t *) task)->queue_id);
 
 	DLEYNA_LOG_DEBUG("Exit");
 
@@ -924,12 +969,15 @@ static gboolean prv_declare(dleyna_gasync_task_t *task,
 				table + i);
 
 		if (!device->ids[i]) {
+			dleyna_task_processor_cancel_queue (((dleyna_task_atom_t *) task)->queue_id);
 			result = TRUE;
 			goto on_error;
 		}
 	}
 
 on_error:
+
+	dleyna_task_queue_task_completed (((dleyna_task_atom_t *) task)->queue_id);
 
 	DLEYNA_LOG_DEBUG("Exit");
 
@@ -972,7 +1020,6 @@ void dlr_device_construct(
 		dleyna_gasync_task_add(queue_id,
 				       prv_get_protocol_info,
 				       G_OBJECT(s_proxy),
-				       prv_get_protocol_info_cb,
 				       cancellable,
 				       NULL, priv_t);
 
@@ -982,9 +1029,8 @@ void dlr_device_construct(
 			dev->construct_step++;
 		} else {
 			dleyna_gasync_task_add(queue_id,
-					       prv_introspect,
+					       prv_introspect_av,
 					       G_OBJECT(av_proxy),
-					       prv_introspect_av_cb,
 					       cancellable,
 					       NULL, priv_t);
 		}
@@ -996,9 +1042,8 @@ void dlr_device_construct(
 			dev->construct_step++;
 		} else {
 			dleyna_gasync_task_add(queue_id,
-					       prv_introspect,
+					       prv_introspect_rc,
 					       G_OBJECT(rc_proxy),
-					       prv_introspect_rc_cb,
 					       cancellable,
 					       NULL, priv_t);
 		}
@@ -1007,11 +1052,11 @@ void dlr_device_construct(
 
 	/* The following task should always be completed */
 	dleyna_gasync_task_add(queue_id, prv_subscribe, G_OBJECT(s_proxy),
-				NULL, NULL, NULL, dev);
+				NULL, NULL, dev);
 
 	if (dev->construct_step < 5)
 		dleyna_gasync_task_add(queue_id, prv_declare, G_OBJECT(s_proxy),
-					NULL, NULL, g_free, priv_t);
+					NULL, g_free, priv_t);
 
 	dleyna_task_queue_start(queue_id);
 

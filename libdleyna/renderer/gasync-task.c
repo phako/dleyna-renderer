@@ -25,9 +25,9 @@ struct dleyna_gasync_task_t_ {
 	dleyna_task_atom_t base;
 	dleyna_gasync_task_action action;
 	GObject *target;
-	GAsyncReadyCallback callback;
 	GCancellable *cancellable;
 	GDestroyNotify free_func;
+	gboolean current;
 	gpointer cb_user_data;
 };
 
@@ -45,7 +45,6 @@ const char *dleyna_gasync_task_create_source(void)
 void dleyna_gasync_task_add(const dleyna_task_queue_key_t *queue_id,
 		dleyna_gasync_task_action action,
 		GObject *target,
-		GAsyncReadyCallback callback,
 		GCancellable *cancellable,
 		GDestroyNotify free_func,
 		gpointer cb_user_data)
@@ -55,7 +54,6 @@ void dleyna_gasync_task_add(const dleyna_task_queue_key_t *queue_id,
 	task = g_new0(dleyna_gasync_task_t, 1);
 
 	task->action = action;
-	task->callback = callback;
 	task->cancellable = cancellable;
 	task->free_func = free_func;
 	task->cb_user_data = cb_user_data;
@@ -68,32 +66,13 @@ void dleyna_gasync_task_add(const dleyna_task_queue_key_t *queue_id,
 	dleyna_task_queue_add_task(queue_id, &task->base);
 }
 
-void dleyna_gasync_task_ready_cb(GObject *source, GAsyncResult *res, gpointer user_data)
-{
-	dleyna_gasync_task_t *task = (dleyna_gasync_task_t *)user_data;
-
-	task->callback(source, res, task->cb_user_data);
-
-	dleyna_task_queue_task_completed(task->base.queue_id);
-}
-
 void dleyna_gasync_task_process_cb(dleyna_task_atom_t *atom,
 		gpointer user_data)
 {
-	gboolean failed = FALSE;
-
 	dleyna_gasync_task_t *task = (dleyna_gasync_task_t *)atom;
 
-	failed = task->action(task, task->target);
-
-	if (failed) {
-		dleyna_task_processor_cancel_queue(task->base.queue_id);
-		dleyna_task_queue_task_completed(task->base.queue_id);
-	}
-
-	if (task->callback == NULL) {
-		dleyna_task_queue_task_completed(task->base.queue_id);
-	}
+	task->current = TRUE;
+	task->action(task, task->target);
 }
 
 void dleyna_gasync_task_cancel_cb(dleyna_task_atom_t *atom,
@@ -105,7 +84,8 @@ void dleyna_gasync_task_cancel_cb(dleyna_task_atom_t *atom,
 		g_cancellable_cancel (task->cancellable);
 		task->cancellable = NULL;
 
-		dleyna_task_queue_task_completed(task->base.queue_id);
+		if (task->current)
+			dleyna_task_queue_task_completed(task->base.queue_id);
 	}
 }
 
