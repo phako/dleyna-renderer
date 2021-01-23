@@ -11,6 +11,6 @@ install:
 
 script:
   - pip3 install meson
-  - meson build
+  - meson build -Dman_pages=false
   - ninja -C build
   - ninja -C build scan-build
