@@ -2439,8 +2439,6 @@ static gboolean prv_props_update(dlr_device_t *device, dlr_task_t *task)
 	g_hash_table_insert(props->root_props, DLR_INTERFACE_PROP_IDENTITY,
 			    g_variant_ref(val));
 
-	service_proxies = &context->service_proxies;
-
 	changed_props_vb = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
 	prv_add_player_speed_props(device->props.player_props,
