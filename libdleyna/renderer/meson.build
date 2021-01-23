@@ -29,7 +29,22 @@ libdleyna_renderer = library(
         math,
         config_h
     ],
-    install: true
+    install: true,
+    install_dir: join_paths(get_option('prefix'), get_option('libdir'), 'dleyna-renderer')
+)
+
+# FIXME: Change the .in file to directly take the values we put in config.h
+config_conf = configuration_data()
+config_conf.set('with_connector_name', get_option('connector'))
+config_conf.set('with_log_type', log_types[get_option('log_type')])
+config_conf.set('with_log_level', ','.join(get_option('log_level')))
+config_conf.set('never_quit', get_option('never_quit').to_string().to_lower())
+configure_file(
+    input: 'dleyna-renderer-service.conf.in',
+    output: 'dleyna-renderer-service.conf',
+    configuration: config_conf,
+    install: true,
+    install_dir: get_option('sysconfdir')
 )
 
 renderer_dep = declare_dependency (
@@ -39,10 +54,11 @@ renderer_dep = declare_dependency (
 
 pkg.generate(
     libdleyna_renderer,
+    name: 'dleyna-renderer-service-1.0',
     description: 'UPnP & DLNA renderer library',
-    subdirs: 'dleyna-1.0',
     version: meson.project_version(),
-    requires: ['gupnp-1.2', 'glib-2.0', 'gio-2.0', 'dleyna-core-1.0']
+    requires: ['gupnp-1.2', 'glib-2.0', 'gio-2.0', 'dleyna-core-1.0'],
+    install_dir: join_paths(get_option('prefix'), get_option('libdir'), 'pkgconfig')
 )
 
 meson.override_dependency('dleyna-renderer-1.0', renderer_dep)
