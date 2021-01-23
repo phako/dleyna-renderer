@@ -33,7 +33,7 @@ conf.set('DLEYNA_LOG_LEVEL_DEBUG',    log_levels[6], description: 'Log level fla
 conf.set('DLEYNA_LOG_LEVEL_DEFAULT',  log_levels[7], description: 'Log level flag to display default level messages')
 conf.set('DLEYNA_LOG_LEVEL_ALL',      log_levels[8], description: 'Log level flag for all messages')
 
-conf.set('DLEYNA_NEVER_QUIT', get_option('never_quit'), description : 'Default service behavior when last client disconnects')
+conf.set('DLEYNA_NEVER_QUIT', get_option('never_quit').to_string().to_upper(), description : 'Default service behavior when last client disconnects')
 conf.set_quoted('DLEYNA_CONNECTOR_NAME', get_option('connector'), description : 'IPC connector name')
 conf.set_quoted('DLEYNA_CONNECTOR_LIB_PATTERN', get_option('connector_lib_pattern'), description : 'Starting pattern for dleyna connector libraries')
 conf.set('DLEYNA_LOG_TYPE', log_types[get_option('log_type')], description: 'Define log output technology')
