@@ -1,3 +1,11 @@
+version 0.7.0
+	- Port to GUPnP 1.2
+	- Do service introspection on device creation
+	- Move to meson for buld system
+	- Subscribe to correct proxy for subscription-lost
+	- Add a man page
+	- Fix cancelling gasync_tasks
+
 version 0.6.0
 	- Ensure that g_context.watchers has a valid value
 	  Merge pull request #150
