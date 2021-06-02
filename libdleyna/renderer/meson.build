@@ -30,7 +30,7 @@ libdleyna_renderer = library(
         config_h
     ],
     install: true,
-    install_dir: join_paths(get_option('prefix'), get_option('libdir'), 'dleyna-renderer')
+    install_dir: library_path,
 )
 
 # FIXME: Change the .in file to directly take the values we put in config.h
