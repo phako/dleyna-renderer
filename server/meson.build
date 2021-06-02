@@ -8,7 +8,8 @@ renderer_service = executable(
         renderer_dep,
     ],
     install: true,
-    install_dir: join_paths(get_option('prefix'), get_option('libexecdir'))
+    install_dir: join_paths(get_option('prefix'), get_option('libexecdir')),
+    install_rpath: library_path
 )
 
 configure_file(
