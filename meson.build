@@ -1,4 +1,4 @@
-project('dleyna-core', 'c', version: '0.7.0')
+project('dleyna-renderer', 'c', version: '0.7.0')
 
 pkg = import('pkgconfig')
 
